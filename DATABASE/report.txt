@@ -1,0 +1,149 @@
+Assignment 1
+
+Shubham Jain CWID : 10456815
+
+Report 1
+
+	
+WITH Q1(CUSTOMER, MIN_Q, MAX_Q, AVG_Q) AS
+	(SELECT cust as CUSTOMER, min(quant) as MIN_Q, max(quant) as MAX_Q, avg(quant) as AVG_Q
+		FROM sales
+			group by cust
+	),
+	Q2(CUSTOMER, MIN_Q, MAX_Q, AVG_Q, MIN_PROD, MIN_DATE, ST) AS
+	(SELECT Q1.CUSTOMER, Q1.MIN_Q, Q1.MAX_Q, Q1.AVG_Q, prod as MIN_PROD, CONCAT(month,'/',day,'/',year) as MIN_DATE, state as ST
+		FROM sales, Q1
+	 	where Q1.CUSTOMER = sales.cust and Q1.MIN_Q = sales.quant 
+	)
+	
+	select Q2.CUSTOMER, Q2.MIN_Q, Q2.MAX_Q, Q2.AVG_Q, Q2.MIN_PROD, Q2.MIN_DATE, Q2.ST, sales.prod as MAX_PROD,CONCAT(sales.month,'/',sales.day,'/',sales.year) as MAX_DATE, sales.state as ST
+		
+		from Q2,sales
+			where Q2.CUSTOMER = sales.cust and sales.quant = Q2.MAX_Q;
+
+
+Report 2
+
+
+WITH Q1(MONTH, DAY, TOTALSALES) AS
+	(select month,day, sum(quant)
+	from sales
+	group by day, month
+
+	),
+	Q2(MONTH, LEASTPROFIT, MAXPROFIT)AS
+	(select Q1.month, min(Q1.TOTALSALES),max(Q1.TOTALSALES)
+		from Q1
+	 group by Q1.month
+	),
+	Q3(MONTH,DAY, LEASTPROFIT) AS
+	( select Q2.MONTH, Q1.DAY, Q2.LEASTPROFIT
+	 from Q1,Q2 
+	 where Q1.TOTALSALES = Q2.LEASTPROFIT and Q1.MONTH = Q2.MONTH
+	
+	)
+	select Q3.MONTH, Q1.day AS MOST_PROFIT_DAY,Q2.MAXPROFIT AS MOST_PROFIT_TOTAL_Q, Q3.DAY AS LEAST_PROFIT_DAY, Q3.LEASTPROFIT AS LEAST_PROFIT_TOTAL_Q
+		from Q3,Q2,Q1
+		where Q3.LEASTPROFIT = Q2.LEASTPROFIT and Q3.MONTH = Q2.MONTH and Q1.MONTH = Q2.MONTH and Q1.TOTALSALES = Q2.MAXPROFIT
+		order by Q3.MONTH
+		;
+
+Report 3
+
+
+WITH Q1(prod, month, TOTALSALES) AS
+	(SELECT prod, month,sum(quant) AS TOTALSALES
+		from sales
+	 		group by prod, month
+	),
+	
+	Q2(prod, MAX_Q, MIN_Q) AS
+	(select Q1.prod,max(Q1.TOTALSALES), min(Q1.TOTALSALES)
+		from Q1 
+	group by Q1.prod
+	),
+	Q3(prod, LEAST_FAV_MO) AS
+	(select Q2.prod, Q1.month
+		from Q2, Q1
+	 where Q2.MIN_Q = Q1.TOTALSALES
+	)
+	select Q2.prod, Q1.month AS MOST_FAV_MO, Q3.LEAST_FAV_MO
+		from Q3,Q2,Q1
+	where Q2.prod = Q3.prod and Q2.MAX_Q = Q1.TOTALSALES;
+
+
+Report 4
+
+
+
+WITH Q1(CUSTOMER, PRODUCT, COUNT1, Q1_AVG) AS
+(select cust, prod, count(cust), avg(quant)
+	from sales
+	where month in(1,2,3)
+	group by cust, prod
+	order by cust,prod),
+	Q2(CUSTOMER, PRODUCT,COUNT2,Q2_AVG) AS
+	( select s1.cust, s1.prod,count(cust), avg(s1.quant)
+	from sales s1
+	where s1.month in(4,5,6)
+	group by s1.cust, s1.prod
+	),
+	Q3(CUSTOMER, PRODUCT,COUNT3, Q3_AVG) AS
+	( select s2.cust, s2.prod,count(cust), avg(s2.quant)
+	from sales s2
+	where s2.month in(7,8,9)
+	group by s2.cust, s2.prod
+	),
+	Q4(CUSTOMER, PRODUCT,COUNT4, Q4_AVG) AS
+	( select s3.cust, s3.prod,count(cust), avg(s3.quant)
+	from sales s3
+	where s3.month in(10,11,12)
+	group by s3.cust, s3.prod
+	),
+	Q5(CUSTOMER, PRODUCT, AVERAGE, COUNT, TOTAL) AS 
+	(select cust, prod, avg(quant), count(*), sum(quant)
+	from sales
+	group by cust, prod
+	)
+	
+   select Q1.CUSTOMER, Q1.PRODUCT, CAST(Q1_AVG AS INT), CAST(Q2_AVG AS INT),CAST(Q3_AVG AS INT),CAST(Q4_AVG AS INT),CAST(AVERAGE AS INT), TOTAL, COUNT
+	from Q1,Q2,Q3,Q4,Q5
+	where Q1.CUSTOMER = Q2.CUSTOMER and Q2.CUSTOMER = Q3.CUSTOMER and Q3.CUSTOMER = Q4.CUSTOMER and Q1.PRODUCT = Q2.PRODUCT and Q2.PRODUCT = Q3.PRODUCT and Q3.PRODUCT = Q4.PRODUCT
+	and Q1.CUSTOMER = Q5.CUSTOMER and Q1.PRODUCT = Q5.PRODUCT
+	order by Q1.CUSTOMER, Q1.PRODUCT
+	;	
+	
+
+
+Report 5
+
+
+
+WITH Q1(CUSTOMER, PRODUCT, MAXQUANT, STATE) AS
+	(select cust, prod,max(quant) ,state
+	from sales
+	where state in('NY','CT', 'NJ')
+	group by state,cust, prod
+	order by cust),
+	
+	Q2(CUSTOMER, PRODUCT, DATENJ, NJ_MAX) AS
+	(select Q1.CUSTOMER,Q1.PRODUCT,CONCAT(month,'/',day,'/',year) as DATE,Q1.MAXQUANT
+		from Q1, sales
+	 where Q1.state = 'NJ' and sales.quant = Q1.MAXQUANT and sales.prod = Q1.PRODUCT and sales.cust = Q1.CUSTOMER
+	),
+	Q3(CUSTOMER, PRODUCT, DATENY, NY_MAX) AS
+	(select Q1.CUSTOMER,Q1.PRODUCT,CONCAT(month,'/',day,'/',year) as DATE,Q1.MAXQUANT
+		from Q1, sales
+	 where Q1.state = 'NY' and sales.quant = Q1.MAXQUANT and sales.prod = Q1.PRODUCT and sales.cust = Q1.CUSTOMER
+	),
+	
+	Q4(CUSTOMER, PRODUCT, DATECT, CT_MAX) AS
+	(select Q1.CUSTOMER,Q1.PRODUCT,CONCAT(month,'/',day,'/',year) as DATE,Q1.MAXQUANT
+		from Q1, sales
+	 where Q1.state = 'CT' and sales.quant = Q1.MAXQUANT and sales.prod = Q1.PRODUCT and sales.cust = Q1.CUSTOMER
+	)
+	
+	select q2.CUSTOMER, q2.PRODUCT, q2.NJ_MAX, q2.DATENJ AS DATE,  q3.NY_MAX,q3.DATENY AS DATE, q4.CT_MAX,  q4.DATECT AS DATE
+	from Q2 q2
+	inner join Q3 q3 on q2.CUSTOMER = q3.CUSTOMER and q2.PRODUCT = q3.PRODUCT 
+	inner join Q4 q4 on q4.CUSTOMER = q3.CUSTOMER and q4.PRODUCT = q3.PRODUCT and (q3.NY_MAX > q2.NJ_MAX or q3.NY_MAX > q4.CT_MAX);

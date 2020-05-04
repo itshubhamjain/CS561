@@ -1,0 +1,126 @@
+Name: Shubham Sanjay Jain
+CWID: 10456815
+ 
+ HomeWork Assignment 2
+
+ Report 1
+
+
+ WITH Q1(PRODUCT, MONTH, SALES) as 
+	 (select prod, month, round(avg(quant), 0)
+	  from sales
+	  group by prod, month
+	  order by prod, month
+	 ),
+	 
+	Q2 ( PRODUCT, MONTH, SALES_COUNT_BETWEEN_AVGS) as
+			(select sales.prod, sales.month , count(*)
+				from sales 
+				left  join Q1 as prev
+					on sales.prod = prev.PRODUCT and 
+						prev.MONTH = sales.month - 1
+				left  join Q1 as next
+					on sales.prod = next.PRODUCT and 
+						next.MONTH = sales.month + 1
+				
+		where (sales.month > 1 and sales.month < 12) 
+	and (
+			(sales.quant >= prev.SALES and sales.quant <= next.SALES)or
+			(sales.quant <= prev.SALES and sales.quant >= next.SALES) or
+				(prev.SALES is null and sales.quant <= next.SALES ) or
+			 (next.SALES is null and sales.quant <= prev.SALES )
+			)
+			 group by sales.prod, sales.month
+
+)
+	select Q1.PRODUCT, Q1. MONTH, Q2.SALES_COUNT_BETWEEN_AVGS
+		from Q1 left join Q2
+		on Q1.PRODUCT = Q2.PRODUCT and Q1.MONTH = Q2.MONTH
+
+
+Report 2
+
+with Q1 (cust, prod, MONTH, AVGMONTH) as
+	(	select cust, prod,month, round(avg(quant), 0)
+	 	from sales
+	 	group by cust, prod, month
+	 	
+	),
+	Q2 (cust, prod, MONTH, BEFORE_AVG,DURING_AVG, AFTER_AVG) as 
+	( select Q1.cust, Q1.prod,Q1.MONTH, before.AVGMONTH, Q1.AVGMONTH, next.AVGMONTH
+	 	from Q1 left outer join Q1 as before
+	 	on Q1.cust = before.cust and Q1.prod = before.prod and before.MONTH = Q1.MONTH -1 
+	left outer join Q1 as next
+	 	on Q1.cust = next.cust and Q1.prod = next.prod and next.MONTH = Q1.MONTH +1 
+	 
+	group by Q1.cust, Q1.prod,Q1.MONTH, before.AVGMONTH,Q1.AVGMONTH, next.AVGMONTH
+	order by Q1.cust, Q1.prod, Q1.MONTH
+	)
+	
+select Q1. cust, Q1.prod, Q1.month, Q2.BEFORE_AVG, Q2.DURING_AVG, Q2.AFTER_AVG
+	from Q1 left outer join Q2
+	on Q1.cust = Q2.cust and Q1.prod = Q2.prod and Q1.MONTH = Q2.MONTH
+
+
+Report 3
+
+with q1 (cust, prod, state, avg) as
+	(select cust, prod, state, round(avg(quant),0)
+		from sales
+	 group by cust, prod, state
+	),
+	
+	q2(CUSTOMER, PRODUCT, STATE, PROD_AVG , OTHER_CUST_AVG, OTHER_PROD_AVG) as
+	(
+		select q1.cust, q1.prod, q1.state, q1.avg, round(avg(others.quant),0), round(avg(others_2.quant),0)
+		from q1 left join sales as others 
+			on q1.prod = others.prod and q1.state = others.state 
+			and others.cust <> q1.cust
+		left join sales as others_2	
+			on q1.cust = others_2.cust and q1.state = others_2.state 
+			and others_2.prod <> q1.prod
+		
+		group by q1.cust, q1.prod, q1.state, q1.avg
+		order by q1.cust, q1.prod, q1.state
+	)
+	
+
+	select * from q2;
+
+Report 4
+
+
+with custprod (cust, prod, summm) as
+	(
+		select cust, prod, sum(quant)
+			from sales
+		group by cust, prod
+	),
+	
+	q1 (cust, prod, month, SUMQUANT) as
+	(
+		select cust, prod,month, sum(quant)
+			from sales
+		group by cust, prod, month
+		
+	),
+	q2 (cust, prod, month,CUMULATIVE) as
+	(
+		select q1.cust, q1.prod, q1.month, sum(calcu.SUMQUANT)
+		from q1 left join q1 as calcu
+			on calcu.cust = q1.cust and calcu.prod = q1.prod and 
+			q1.month >= calcu.month
+			group by q1.cust, q1.prod, q1.month
+		order by q1.cust, q1.prod, q1.month
+	)
+	,
+	
+	q3 (CUSTOMER, PRODUCT, _1_3rd_PURCHASED_BY_MONTH) as
+	(	select q2.cust, q2.prod, min(q2.month)
+	 	from q2, custprod
+	 	where q2.cust = custprod.cust and q2.prod = custprod.prod 
+	 and 3*q2.CUMULATIVE > custprod.summm
+	 group by q2.cust, q2.prod
+	 
+	)
+select * from q3;
